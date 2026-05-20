@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Маршрут машиніста</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans:wght@400;500;600&display=swap');
+
+  :root {
+    --navy: #0b2545;
+    --blue: #1a5276;
+    --accent: #e8a020;
+    --green: #1a7a4a;
+    --red: #c0392b;
+    --surface: #f0f4f8;
+    --border: #cfd8e3;
+    --text: #1a2332;
+    --muted: #6b7a8d;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Noto Sans', sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --navy: #0d1b2a; --blue: #1e3a5f; --accent: #f0b429;
+      --green: #1e8a52; --red: #e74c3c;
+      --surface: #111e2d; --border: #1e3048;
+      --text: #d8e6f0; --muted: #7a95b0;
+    }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--surface);
+    color: var(--text);
+    padding: 20px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  h2 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--navy);
+    letter-spacing: -0.3px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .toolbar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+
+  button {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    border: none;
+    padding: 7px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: opacity .15s, transform .1s;
+  }
+  button:hover { opacity: .85; }
+  button:active { transform: scale(.97); }
+
+  .btn-add   { background: var(--green); color: #fff; }
+  .btn-clear { background: var(--surface); color: var(--muted); border: 1px solid var(--border); }
+  .btn-del   { background: transparent; color: var(--red); border: 1px solid transparent; padding: 4px 8px; font-size: 12px; }
+  .btn-del:hover { border-color: var(--red); background: rgba(192,57,43,.08); }
+  .btn-gear  { background: transparent; color: var(--muted); border: 1px solid transparent; padding: 4px 8px; font-size: 13px; }
+  .btn-gear:hover { background: var(--border); color: var(--text); }
+
+  .table-wrap {
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--navy);
+    box-shadow: 0 2px 12px rgba(0,0,0,.12);
+  }
+
+  table { width: 100%; border-collapse: collapse; min-width: 680px; }
+
+  thead th {
+    background: var(--navy);
+    color: #b8d4f0;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: .6px;
+    text-transform: uppercase;
+    padding: 10px 8px;
+    text-align: center;
+    white-space: nowrap;
+    border-bottom: 1px solid rgba(255,255,255,.1);
+  }
+
+  tbody tr { background: var(--surface); border-bottom: 1px solid var(--border); transition: background .1s; }
+  tbody tr:hover { background: #e8f0f8; }
+  @media (prefers-color-scheme: dark) {
+    tbody tr:hover { background: #162033; }
+  }
+  tbody tr.details-row { background: #e4edf8; }
+  @media (prefers-color-scheme: dark) { tbody tr.details-row { background: #0f1c2e; } }
+
+  td {
+    padding: 6px;
+    text-align: center;
+    border-right: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  td:last-child { border-right: none; }
+  td.num { font-family: var(--mono); font-size: 12px; color: var(--muted); width: 28px; }
+
+  input[type=text], input[type=time], input[type=number] {
+    font-family: var(--mono);
+    font-size: 13px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 3px 5px;
+    width: 100%;
+    color: var(--text);
+    text-align: center;
+    transition: border-color .15s, background .15s;
+    outline: none;
+  }
+  input:hover { border-color: var(--border); }
+  input:focus { border-color: var(--accent); background: rgba(232,160,32,.06); }
+
+  .maneuver-cell { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+  .maneuver-cell.has-maneuver { color: var(--accent); }
+  .maneuver-cell.zero { color: var(--muted); }
+
+  .details-panel {
+    padding: 12px 16px;
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  .detail-field { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+  .detail-field label { white-space: nowrap; }
+  .detail-field input[type=number] {
+    width: 70px; text-align: center;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 5px; padding: 4px;
+  }
+  .detail-field input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .summary-card {
+    background: var(--navy);
+    color: #b8d4f0;
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.8;
+    border: 1px solid rgba(255,255,255,.06);
+  }
+  .summary-card .card-title {
+    font-size: 10px;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+    color: #7a9ec0;
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+  .highlight       { color: var(--accent); font-weight: 600; }
+  .highlight-green { color: #4ecf8a; font-weight: 600; }
+
+  .cold-block {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 14px 0 0;
+    padding: 12px 16px;
+    background: var(--navy);
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,.06);
+    font-family: var(--mono);
+    font-size: 13px;
+    color: #b8d4f0;
+  }
+  .cold-label { font-size: 11px; letter-spacing: .6px; text-transform: uppercase; color: #7a9ec0; white-space: nowrap; }
+  .cold-block input {
+    font-family: var(--mono);
+    font-size: 14px;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 6px;
+    padding: 5px 10px;
+    color: #b8d4f0;
+    width: 90px;
+    text-align: center;
+    outline: none;
+  }
+  .cold-block input:focus { border-color: var(--accent); }
+  #cold-hint { font-size: 11px; color: var(--muted); }
+
+  .itog-card {
+    margin-top: 10px;
+    grid-column: 1 / -1;
+  }
+  .itog-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px 20px;
+    margin-top: 4px;
+  }
+  .itog-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .itog-row.itog-divider {
+    border-top: 1px solid rgba(255,255,255,.1);
+    padding-top: 8px;
+    margin-top: 2px;
+  }
+  .itog-label {
+    font-size: 10px;
+    letter-spacing: .6px;
+    text-transform: uppercase;
+    color: #7a9ec0;
+  }
+  .itog-value {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .itog-card input[type=number] {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 600;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 6px;
+    padding: 4px 8px;
+    color: #b8d4f0;
+    width: 100%;
+    outline: none;
+  }
+  .itog-card input[type=number]:focus { border-color: var(--accent); }
+  .itog-card input[type=number]::placeholder { color: rgba(255,255,255,.2); }
+</style>
+</head>
+<body>
+
+<h2>
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+       stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <rect x="2" y="7" width="20" height="14" rx="2"/>
+    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+    <path d="M12 12v.01"/>
+  </svg>
+  Маршрут машиніста
+</h2>
+
+<div class="toolbar">
+  <button class="btn-add" onclick="addRow()">+ Додати рядок</button>
+  <button class="btn-clear" onclick="clearAll()">Очистити все</button>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Станція</th>
+        <th>Прибуття</th>
+        <th>Відправлення</th>
+        <th>Маневри</th>
+        <th>Поїзд №</th>
+        <th>Лок-ви</th>
+        <th>Відстань км</th>
+        <th>Вага т</th>
+        <th>Дії</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<div class="cold-block">
+  <label class="cold-label">❄ Холодний стан</label>
+  <input type="text" id="cold-input" placeholder="год:хв" maxlength="5"
+    oninput="onColdInput(this.value)">
+  <span id="cold-hint"></span>
+</div>
+
+<div class="summary-grid">
+  <div class="summary-card">
+    <div class="card-title">⚙ Маневри</div>
+    <div id="maneuver-content">—</div>
+    <div id="maneuver-total" style="margin-top:6px;border-top:1px solid rgba(255,255,255,.1);padding-top:6px"></div>
+  </div>
+  <div class="summary-card">
+    <div class="card-title">🚛 Резерв</div>
+    <div id="reserve-content">—</div>
+  </div>
+  <div class="summary-card">
+    <div class="card-title">📊 Коефіцієнти поїздів</div>
+    <div id="coeff-content">—</div>
+  </div>
+</div>
+
+<div class="summary-card itog-card">
+  <div class="card-title">🧾 Ітог</div>
+  <div class="itog-grid">
+    <div class="itog-row">
+      <span class="itog-label">Було в кг</span>
+      <input type="number" id="itog-bulo" placeholder="0" step="0.01" min="0"
+        oninput="renderItog()">
+    </div>
+    <div class="itog-row">
+      <span class="itog-label">Уд. вес</span>
+      <input type="number" id="itog-ud" placeholder="0.000" step="0.001" min="0"
+        oninput="renderItog()">
+    </div>
+    <div class="itog-row itog-divider">
+      <span class="itog-label">Норма</span>
+      <span class="itog-value" id="itog-norma">—</span>
+    </div>
+    <div class="itog-row">
+      <span class="itog-label">В баку</span>
+      <span class="itog-value highlight-green" id="itog-bak">—</span>
+    </div>
+  </div>
+</div>
+
+<div class="summary-card itog-card" style="margin-top:10px">
+  <div class="card-title">📋 Списуємо</div>
+  <div class="itog-grid">
+    <div class="itog-row">
+      <span class="itog-label">Було в кг</span>
+      <input type="number" id="spys-bulo" placeholder="0" step="0.01" min="0"
+        oninput="renderSpys()">
+    </div>
+    <div class="itog-row">
+      <span class="itog-label">Уд. вес</span>
+      <input type="number" id="spys-ud" placeholder="0.000" step="0.001" min="0"
+        oninput="renderSpys()">
+    </div>
+    <div class="itog-row">
+      <span class="itog-label">Норма, кг</span>
+      <input type="number" id="spys-norma" placeholder="0" step="0.01" min="0"
+        oninput="renderSpys()">
+    </div>
+    <div class="itog-row itog-divider">
+      <span class="itog-label">Бак, кг</span>
+      <span class="itog-value" id="spys-bak-kg">—</span>
+    </div>
+    <div class="itog-row">
+      <span class="itog-label">Бак, л</span>
+      <span class="itog-value highlight-green" id="spys-bak-l">—</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  let rows = [];
+
+  const num = v => { const n = Number(v); return isNaN(n) ? 0 : n; };
+
+  const toMin = t => {
+    if (!t || !t.includes(':')) return 0;
+    const [h, m] = t.split(':').map(Number);
+    return h * 60 + m;
+  };
+
+  const fmtTime = m => {
+    if (!m) return '00:00';
+    const h = Math.floor(m / 60), mm = m % 60;
+    return `${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+  };
+
+  const getNorm = c => {
+    if (c <= 2)  return 12;
+    if (c <= 5)  return 8;
+    if (c <= 10) return 6.5;
+    if (c <= 20) return 6;
+    if (c <= 30) return 5;
+    if (c <= 40) return 4;
+    return 3.5;
+  };
+
+  const calcManeuver = r => {
+    const a = toMin(r.arr), d = toMin(r.dep);
+    if (!a && !d) return 0;
+    const crossMidnight = d < a && r.newDay;
+    const diff = d - a + (crossMidnight ? 24 * 60 : 0);
+    return Math.max(0, diff);
+  };
+
+  const esc = s => String(s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+
+  function addRow() {
+    rows.push({ st:'', arr:'', dep:'', train:'', locomotives:1,
+                distance:'', weight:'', fuelNorm:12, newDay:false, open:false });
+    render();
+  }
+
+  function delRow(i) {
+    rows.splice(i, 1);
+    render();
+  }
+
+  function toggleOpen(i) {
+    rows[i].open = !rows[i].open;
+    render();
+  }
+
+  function clearAll() {
+    if (rows.length === 0) return;
+    if (confirm('Очистити всі рядки?')) { rows = []; render(); }
+  }
+
+  function setField(i, f, v) {
+    rows[i][f] = v;
+    // Оновити лише комірку маневрів цього рядка, не перебудовуючи DOM
+    const man    = calcManeuver(rows[i]);
+    const hasMan = man > 0;
+    const cells  = document.querySelectorAll('#tbody tr:not(.details-row)');
+    if (cells[i]) {
+      const cell = cells[i].querySelectorAll('td')[4];
+      if (cell) {
+        cell.textContent = hasMan ? fmtTime(man) : '—';
+        cell.className = 'maneuver-cell ' + (hasMan ? 'has-maneuver' : 'zero');
+      }
+    }
+    renderSummary();
+  }
+
+  function setCheck(i, f, v) {
+    rows[i][f] = v;
+    renderSummary();
+  }
+
+  function render() {
+    const tb = document.getElementById('tbody');
+    tb.innerHTML = '';
+
+    rows.forEach((r, i) => {
+      const man    = calcManeuver(r);
+      const hasMan = man > 0;
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="num">${i + 1}</td>
+        <td><input type="text"   value="${esc(r.st)}"          placeholder="Станція"
+            oninput="setField(${i},'st',this.value)"></td>
+        <td><input type="time"   value="${r.arr}"
+            oninput="setField(${i},'arr',this.value)"></td>
+        <td><input type="time"   value="${r.dep}"
+            oninput="setField(${i},'dep',this.value)"></td>
+        <td class="maneuver-cell ${hasMan ? 'has-maneuver' : 'zero'}">${hasMan ? fmtTime(man) : '—'}</td>
+        <td><input type="text"   value="${esc(r.train)}"        placeholder="№"
+            oninput="setField(${i},'train',this.value)"></td>
+        <td><input type="number" value="${r.locomotives}" min="1" max="10" style="width:50px"
+            oninput="setField(${i},'locomotives',this.value)"></td>
+        <td><input type="number" value="${r.distance}"   min="0" placeholder="0"
+            oninput="setField(${i},'distance',this.value)"></td>
+        <td><input type="number" value="${r.weight}"     min="0" placeholder="0"
+            oninput="setField(${i},'weight',this.value)"></td>
+        <td style="white-space:nowrap">
+          <button class="btn-gear" onclick="toggleOpen(${i})" title="Налаштування">⚙</button>
+          <button class="btn-del"  onclick="delRow(${i})"     title="Видалити">✕</button>
+        </td>
+      `;
+      tb.appendChild(tr);
+
+      if (r.open) {
+        const det = document.createElement('tr');
+        det.className = 'details-row';
+        det.innerHTML = `
+          <td colspan="10">
+            <div class="details-panel">
+              <div class="detail-field">
+                <label>⛽ Норма (кг/год):</label>
+                <input type="number" value="${r.fuelNorm}" step="0.1" min="0"
+                  oninput="setField(${i},'fuelNorm',parseFloat(this.value)||12)">
+              </div>
+              <div class="detail-field">
+                <label>🌙 Нова доба:</label>
+                <input type="checkbox" ${r.newDay ? 'checked' : ''}
+                  onchange="setCheck(${i},'newDay',this.checked)">
+              </div>
+            </div>
+          </td>
+        `;
+        tb.appendChild(det);
+      }
+    });
+
+    renderSummary();
+  }
+
+  function renderSummary() {
+    const manGroups = {};
+    let reserveDist = 0, reserveFuel = 0;
+    const coeffList = [];
+
+    rows.forEach((r, i) => {
+      const loc  = Math.max(1, num(r.locomotives));
+      const w    = num(r.weight);
+      const d    = num(r.distance);
+      const norm = num(r.fuelNorm) || 12;
+      const man  = calcManeuver(r);
+
+      // маневри — час простою на станції
+      if (man > 0) {
+        if (!manGroups[norm]) manGroups[norm] = { min: 0, kg: 0 };
+        manGroups[norm].min += man * loc;
+        manGroups[norm].kg  += (man / 60 * norm) * loc;
+      }
+
+      // резерв — рух без ваги
+      if (w === 0 && d > 0) {
+        reserveDist += d;
+        reserveFuel += d * 0.75 * loc;
+      }
+
+      // коефіцієнти — рух з вагою
+      if (w > 0 && d > 0) {
+        coeffList.push({ label: r.train || `Рядок ${i + 1}`, c: (w * d) / 1000 / loc });
+      }
+    });
+
+    // Маневри
+    const norms = Object.keys(manGroups);
+    const totalManMin = Object.values(manGroups).reduce((s, g) => s + g.min, 0);
+    const coldMin = parseCold();
+
+    // Відняти холодний стан від груп, починаючи з найменшої норми
+    let coldLeft = coldMin;
+    const adjGroups = {};
+    Object.keys(manGroups).sort((a,b) => Number(a)-Number(b)).forEach(n => {
+      const g = manGroups[n];
+      const subtract = Math.min(coldLeft, g.min);
+      coldLeft -= subtract;
+      const adjMin = g.min - subtract;
+      adjGroups[n] = { min: adjMin, kg: adjMin / 60 * Number(n) };
+    });
+
+    document.getElementById('maneuver-content').innerHTML = norms.length === 0
+      ? '<span style="color:var(--muted)">Немає маневрів</span>'
+      : Object.keys(adjGroups).map(n => {
+          const g = adjGroups[n];
+          return `Норма <span class="highlight">${n} кг/год</span>: ${fmtTime(g.min)} → <span class="highlight">${g.kg.toFixed(2)} кг</span>`;
+        }).join('<br>');
+
+    const adjTotal = totalManMin - coldMin;
+    const totalEl = document.getElementById('maneuver-total');
+    if (norms.length > 0) {
+      const adjKg = Object.values(adjGroups).reduce((s,g) => s + g.kg, 0);
+      lastManeuverKg = adjKg;
+      totalEl.innerHTML =
+        `Загальний час: <span class="highlight">${fmtTime(totalManMin)}</span>` +
+        (coldMin > 0 ? ` − ${fmtTime(coldMin)} = <span class="highlight">${fmtTime(Math.max(0, adjTotal))}</span>` : '') +
+        `<br>Разом кг: <span class="highlight-green">${adjKg.toFixed(2)} кг</span>`;
+    } else {
+      totalEl.innerHTML = '';
+    }
+
+    // Резерв
+    document.getElementById('reserve-content').innerHTML = reserveDist === 0
+      ? '<span style="color:var(--muted)">Немає резервних поїздок</span>'
+      : `Відстань: <span class="highlight">${reserveDist.toFixed(1)} км</span><br>Витрати: <span class="highlight">${reserveFuel.toFixed(2)} кг</span>`;
+    lastReserveFuel = reserveFuel;
+
+    // Коефіцієнти
+    if (coeffList.length === 0) {
+      document.getElementById('coeff-content').innerHTML =
+        '<span style="color:var(--muted)">Немає поїздок з вагою</span>';
+    } else {
+      const total = coeffList.reduce((a, b) => a + b.c, 0);
+      const norm  = getNorm(total);
+      const fuel  = total * norm;
+      const rows_ = coeffList.map((item, i) =>
+        `${item.label}: <span style="color:#7db8e8">${item.c.toFixed(3)}</span>`
+      ).join('<br>');
+      document.getElementById('coeff-content').innerHTML =
+        `${rows_}<br><br>` +
+        `Загальний: <span class="highlight">${total.toFixed(3)}</span>  Норма: <span class="highlight">${norm}</span><br>` +
+        `Фінальні витрати: <span class="highlight-green">${fuel.toFixed(2)} кг</span>`;
+      lastTrainFuel = fuel;
+    }
+    if (coeffList.length === 0) lastTrainFuel = 0;
+
+    renderItog();
+  }
+
+  let coldValue = '';
+  let lastManeuverKg = 0;
+  let lastReserveFuel = 0;
+  let lastTrainFuel = 0;
+
+  function renderItog() {
+    const bulo   = parseFloat(document.getElementById('itog-bulo').value) || 0;
+    const ud     = parseFloat(document.getElementById('itog-ud').value)   || 0;
+    const norma  = lastManeuverKg + lastReserveFuel + lastTrainFuel;
+
+    document.getElementById('itog-norma').textContent =
+      norma > 0 ? norma.toFixed(2) + ' кг' : '—';
+
+    if (bulo > 0 && ud > 0 && norma > 0) {
+      const bak = (bulo - norma) / ud;
+      document.getElementById('itog-bak').textContent = bak.toFixed(2) + ' л';
+    } else {
+      document.getElementById('itog-bak').textContent = '—';
+    }
+    renderSpys();
+  }
+
+  function renderSpys() {
+    const sBulo  = document.getElementById('spys-bulo');
+    const sUd    = document.getElementById('spys-ud');
+    const sNorma = document.getElementById('spys-norma');
+    const iBulo  = parseFloat(document.getElementById('itog-bulo').value) || 0;
+    const iUd    = parseFloat(document.getElementById('itog-ud').value)   || 0;
+
+    const sBuloVal  = parseFloat(sBulo.value)  || 0;
+    const sUdVal    = parseFloat(sUd.value)    || 0;
+    const sNormaVal = parseFloat(sNorma.value) || 0;
+
+    // Перевірка збігу з Ітог
+    const buloMatch = sBuloVal === 0 || Math.abs(sBuloVal - iBulo) < 0.001;
+    const udMatch   = sUdVal   === 0 || Math.abs(sUdVal   - iUd)   < 0.0001;
+
+    sBulo.style.borderColor = (sBuloVal > 0 && !buloMatch) ? '#e74c3c' : '';
+    sBulo.style.color       = (sBuloVal > 0 && !buloMatch) ? '#e74c3c' : '';
+    sUd.style.borderColor   = (sUdVal   > 0 && !udMatch)   ? '#e74c3c' : '';
+    sUd.style.color         = (sUdVal   > 0 && !udMatch)   ? '#e74c3c' : '';
+
+    // Бак кг = Було - Норма
+    const bakKgEl = document.getElementById('spys-bak-kg');
+    const bakLEl  = document.getElementById('spys-bak-l');
+
+    if (sBuloVal > 0 && sNormaVal > 0) {
+      const bakKg = sBuloVal - sNormaVal;
+      bakKgEl.textContent = Math.round(bakKg) + ' кг';
+      bakKgEl.style.color = bakKg < 0 ? '#e74c3c' : '';
+
+      if (sUdVal > 0) {
+        const bakL = bakKg / sUdVal;
+        bakLEl.textContent = Math.round(bakL) + ' л';
+        bakLEl.style.color = bakL < 0 ? '#e74c3c' : '';
+      } else {
+        bakLEl.textContent = '—';
+        bakLEl.style.color = '';
+      }
+    } else {
+      bakKgEl.textContent = '—';
+      bakKgEl.style.color = '';
+      bakLEl.textContent  = '—';
+      bakLEl.style.color  = '';
+    }
+  }
+
+  const parseCold = () => {
+    const v = coldValue.trim();
+    if (!v) return 0;
+    if (v.includes(':')) {
+      const [h, m] = v.split(':').map(Number);
+      return (isNaN(h)?0:h)*60 + (isNaN(m)?0:m);
+    }
+    const n = Number(v);
+    return isNaN(n) ? 0 : n * 60;
+  };
+
+  function onColdInput(v) {
+    coldValue = v;
+    // Авто-форматування: після двох цифр додати двокрапку
+    const hint = document.getElementById('cold-hint');
+    const m = parseCold();
+    hint.textContent = m > 0 ? `= ${m} хв` : '';
+    renderSummary();
+  }
+
+  render();
+</script>
+</body>
+</html>
